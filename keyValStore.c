@@ -2,9 +2,9 @@
 #include "keyValStore.h"
 #include "stdio.h"
 
-
-int inStore =0;//Speichert ab, wie viele KeyValues bereits im Store sind!
-KeyValue store[50];//Die Struktur muss nicht hier definiert werden, weil sue schon in keyValStore.h ist
+#define KEY_VALUE_MAX_LENGTH 50
+int inStore =0;                       //Speichert ab, wie viele KeyValues bereits im Store sind!
+KeyValue store[KEY_VALUE_MAX_LENGTH]; //Die Struktur muss nicht hier definiert werden, weil sue schon in keyValStore.h ist
 
 int get(char *key, char *res){
 
@@ -34,6 +34,14 @@ int put(char *key, char *value){
             strcpy(store[i].value, value);
             return 1;
         }
+    }
+
+    // der Key ist nicht im Store, jetzt müssen wir noch checken,
+    // ob wir genügend Platz haben, sonst bekommen wir vielleicht einen
+    // BufferOverflow (IndexOutOfBoundsException)
+    if(inStore >= KEY_VALUE_MAX_LENGTH){
+        // kein Platz mehr
+        return -1;
     }
 
     //Falls nicht -> wird das neue KeyValue-Objekt hier in den Store getan

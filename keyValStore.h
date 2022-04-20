@@ -5,9 +5,12 @@
 #ifndef PRAKTIKUM_KEYVALSTORE_H
 #define PRAKTIKUM_KEYVALSTORE_H
 
+#define MAX_KEY_LENGTH 50
+#define MAX_VALUE_LENGTH 50
+
 typedef struct KeyValue_{
-    char key[50];
-    char value[50];
+    char key[MAX_KEY_LENGTH];
+    char value[MAX_VALUE_LENGTH];
 }KeyValue;
 
 
