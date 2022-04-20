@@ -2,27 +2,41 @@
 #include <netinet/in.h>
 #include "keyValStore.h"
 #include "string.h"
+#include "assert.h"
+
+
+void testStoreDel(){
+    del("Blub");
+    del("Eins");
+    del("Noch irgendwas");
+
+    put("Eins", "hallo");
+    put("Noch irgendwas", "bla");
+
+    assert(del("Eins") == 1);
+    assert(del("Noch irgendwas") == 1);
+    assert(del("Blub") < 0); // das sollte schief gehen
+}
+
+void testStoreSimplePutGet(){
+    char key[MAX_KEY_LENGTH] = "name";
+    char val[MAX_VALUE_LENGTH] = "robert";
+
+    put(key,val);
+
+    char res[MAX_VALUE_LENGTH];
+    get(key, res);
+    assert(strcmp(val, res) == 0);
+}
+
+void testStore(){
+    testStoreDel();
+    testStoreSimplePutGet();
+}
+
+
 
 int main() {
-char key[50] = "EINS";
-char value[50] = "ICH";
-    char key2[50] = "ZWEI";
-    char value2[50] = "DU";
-
-    put(key2,value2);
-    char back[50];
-    get(key2,back);
-
-    printf("\n Zurückgekommen: %s",back);
-
-    //falschen Löschen
-    if(del("EINS") == 0){
-        printf("\n falscher Gelöscht");
-    }
-    if(del("ZWEI") == 1){
-        printf("\n richtiger Gelöscht");
-    }
-
-    printStore();
+    testStore();
     return 0;
 }
