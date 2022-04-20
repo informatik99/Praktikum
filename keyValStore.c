@@ -30,7 +30,7 @@ int put(char *key, char *value){
 
     /*Geht den Store durch, um zu schauen, ob dieser Key schon einen Wert hat*/
     for(int i = 0;i< inStore;i++){
-        if(store[i].key == key){
+        if(strncmp(store[i].key,key,MAX_KEY_LENGTH) == 0){
             strcpy(store[i].value, value);
             return 1;
         }
