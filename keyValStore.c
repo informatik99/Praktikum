@@ -9,8 +9,8 @@ KeyValue store[KEY_VALUE_MAX_LENGTH]; //Die Struktur muss nicht hier definiert w
 int get(char *key, char *res){
 
     for(int i=0;i< inStore;i++){
-        if(strcmp(store[i].key,key) == 0){
-            strcpy(res,store[i].value);
+        if(strncmp(store[i].key,key,MAX_KEY_LENGTH) == 0){
+            strncpy(res,store[i].value, MAX_VALUE_LENGTH);
             return 0;
         }
     }
@@ -21,8 +21,8 @@ int put(char *key, char *value){
 
     KeyValue new = {"",""};
 
-    strcpy(new.key,key);
-    strcpy(new.value,value);
+    strncpy(new.key,key, MAX_KEY_LENGTH);
+    strncpy(new.value,value, MAX_VALUE_LENGTH);
 
     printf("\nKEY: %s",new.key);
     printf("\nVAL: %s",new.value);
@@ -31,7 +31,7 @@ int put(char *key, char *value){
     /*Geht den Store durch, um zu schauen, ob dieser Key schon einen Wert hat*/
     for(int i = 0;i< inStore;i++){
         if(strncmp(store[i].key,key,MAX_KEY_LENGTH) == 0){
-            strcpy(store[i].value, value);
+            strncpy(store[i].value, value, MAX_VALUE_LENGTH);
             return 1;
         }
     }
