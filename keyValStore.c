@@ -87,8 +87,8 @@ int del(char *key){
     return 1;
 }
 
-    void testarray(){
-        printf("Im Store sind:");
+void printStore(){
+    printf("Im Store sind:");
     for(int i=0; i<inStore;i++){
         printf("\n Key: %s und Wert: %s",store[i].key,store[i].value);
     }

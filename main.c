@@ -23,6 +23,6 @@ char value[50] = "ICH";
         printf("\n richtiger Gelöscht");
     }
 
-    testarray();
+    printStore();
     return 0;
 }
