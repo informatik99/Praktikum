@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 99)
 
 
 
-add_executable(Praktikum main.c keyValStore.c keyValStore.h)
+add_executable(Praktikum main.c keyValStore.c keyValStore.h userInteraction.h userInteraction.c)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
