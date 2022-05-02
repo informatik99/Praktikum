@@ -13,10 +13,25 @@ typedef struct KeyValue_{
     char value[MAX_VALUE_LENGTH];
 }KeyValue;
 
+#define KEY_VALUE_MAX_LENGTH 50
+typedef struct KeyValueDatabase {
+    int inStore;
+    KeyValue store[KEY_VALUE_MAX_LENGTH];
+} KeyValueDatabase;
+
+
+int db_init(KeyValueDatabase *db);
+int db_free(KeyValueDatabase *db);
+
+int db_put(KeyValueDatabase *db, const char *key, const char *value);
+int db_get(KeyValueDatabase *db, const char *key, char *result);
+int db_del(KeyValueDatabase *db, const char *key);
+int db_print(KeyValueDatabase *db);
+
 
 int put(char *key, char *value);
 int get(char *key, char *res);
 int del(char *key);
-void printStore();
+int printStore();
 
 #endif //PRAKTIKUM_KEYVALSTORE_H
