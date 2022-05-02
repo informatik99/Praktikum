@@ -75,6 +75,7 @@ void userInteraction(int fileDescriptor){
 
 int main() {
     testStore();
+    fprintf(stdout,"server store working\n");
 
     // der server braucht ein socket für die kommunikation
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -82,6 +83,7 @@ int main() {
         fprintf(stderr,"failed to open socket\n");
         return 3;
     }
+    fprintf(stdout,"socket created\n");
 
     // nach dem Schließen unseres server programms,
     // wäre der socket noch für längere Zeit gebunden
@@ -90,6 +92,8 @@ int main() {
         fprintf(stderr,"setsockopt(SO_REUSEADDR) failed");
         return 4;
     }
+    fprintf(stdout,"socket options set\n");
+
 
     // wir wollen eine TCP Verbindung mit unserem eigenen Port
     struct sockaddr_in serverAddress;
@@ -106,11 +110,13 @@ int main() {
         fprintf(stderr, "couldn't bind socket\n");
         return 4;
     }
+    fprintf(stdout,"socket bound for port %d \n", SERVER_PORT);
 
 
     // jetzt können wir anfangen auf Anfragen zu hören
     int maxConnections = 5;
     listen(serverSocket, maxConnections);
+    fprintf(stdout,"server listening on port %d \n", SERVER_PORT);
 
     struct sockaddr_in clientAddress;
     unsigned int clientAddressLen = sizeof(clientAddress);

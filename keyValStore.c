@@ -89,9 +89,9 @@ int db_del(KeyValueDatabase *db, const char *key){
 
 
 int db_print(KeyValueDatabase *db){
-    printf("Im Store sind:");
+    printf("Im Store sind:\n");
     for(int i=0; i<db->inStore;i++){
-        printf("\n Key: %s und Wert: %s",db->store[i].key, db->store[i].value);
+        printf("(Key: \"%s\" Wert: \"%s\")",db->store[i].key, db->store[i].value);
     }
     return 1;
 }
@@ -108,9 +108,6 @@ int del(char *key){
     return db_del(&globalDb, key);
 }
 
-int printStore(){
-    return db_print(&globalDb);
-}
 
 
 
