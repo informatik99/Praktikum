@@ -19,7 +19,7 @@ typedef struct KeyValue_{
 typedef struct KeyValueDatabase {
     KeyValue store[KEY_VALUE_MAX_LENGTH];
     int inStore;
-    sem_t semaphore;
+    sem_t semPutGetDelPrint;
 } KeyValueDatabase;
 
 
