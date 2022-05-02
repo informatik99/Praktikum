@@ -112,16 +112,40 @@ int main() {
     int maxConnections = 5;
     listen(serverSocket, maxConnections);
 
-    // gerade akzeptieren wir nur ein client
     struct sockaddr_in clientAddress;
     unsigned int clientAddressLen = sizeof(clientAddress);
-    int clientFileDescriptor = accept(serverSocket,
-                                      (struct sockaddr*) &clientAddress,
-                                      &clientAddressLen);
 
-    // jetzt kann der user damit interagieren
-    userInteraction(clientFileDescriptor);
+    while(1){
+        int clientFileDescriptor = accept(serverSocket,
+                                          (struct sockaddr*) &clientAddress,
+                                          &clientAddressLen);
 
-    close(clientFileDescriptor);
+        if(clientFileDescriptor < 0){
+            fprintf(stderr, "invalid clientFileDescriptor\n");
+            break;
+        }
+
+        int childPid = fork();
+        if(childPid < 0){
+            fprintf(stderr, "couldn't fork!\n");
+            break;
+        }
+
+        if(childPid == 0){
+            // child process
+            // jetzt kann der user mit dem clientFileDescriptor interagieren
+            userInteraction(clientFileDescriptor);
+            close(clientFileDescriptor);
+            break;
+        }
+
+        // parent process
+        fprintf(stdout,"child process created, pid: %d\n", childPid);
+        close(clientFileDescriptor);
+    }
+
+
+
+
     return 0;
 }
