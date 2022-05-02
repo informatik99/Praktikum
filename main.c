@@ -5,7 +5,7 @@
 #include "string.h"
 
 
-void userInteraction(int fileDescriptor){
+void userInteraction(KeyValueDatabase *db, int fileDescriptor){
     int inputBuffSize = MAX_KEY_LENGTH + MAX_VALUE_LENGTH;
     char inputBuff[inputBuffSize];
 
@@ -17,21 +17,21 @@ void userInteraction(int fileDescriptor){
         if(strncmp(inputBuff,"QUIT",4) == 0){
             break;
         } else if(sscanf(inputBuff,"PUT %s %s",keyBuff,valBuff) == 2){
-            status = put(keyBuff,valBuff);
+            status = db_put(db,keyBuff,valBuff);
             if(status < 0){
                 dprintf(fileDescriptor,"PUT FAILED\n");
             } else {
                 dprintf(fileDescriptor,"PUT %s:%s\n",keyBuff,valBuff);
             }
         } else if(sscanf(inputBuff, "DEL %s",keyBuff) == 1){
-            status = del(keyBuff);
+            status = db_del(db,keyBuff);
             if(status < 0){
                 dprintf(fileDescriptor, "DEL failed\n");
             } else {
                 dprintf(fileDescriptor,"DEL %s\n", keyBuff);
             }
         } else if(sscanf(inputBuff, "GET %s", keyBuff)){
-            status = get(keyBuff, valBuff);
+            status = db_get(db,keyBuff, valBuff);
             if(status < 0 ){
                 dprintf(fileDescriptor, "GET failed\n");
             } else {
@@ -44,7 +44,14 @@ void userInteraction(int fileDescriptor){
 #define SERVER_PORT 5678
 
 int main() {
-    db_test();
+
+    KeyValueDatabase db;
+    db_init(&db);
+    if(!db_test(&db)){
+        fprintf(stderr,"server store not working!\n");
+        return 1;
+    };
+
     fprintf(stdout,"server store working\n");
 
     // der server braucht ein socket für die kommunikation
@@ -110,7 +117,7 @@ int main() {
         if(childPid == 0){
             // child process
             // jetzt kann der user mit dem clientFileDescriptor interagieren
-            userInteraction(clientFileDescriptor);
+            userInteraction(&db,clientFileDescriptor);
             close(clientFileDescriptor);
             break;
         }

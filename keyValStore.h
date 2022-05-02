@@ -28,11 +28,6 @@ int db_get(KeyValueDatabase *db, const char *key, char *result);
 int db_del(KeyValueDatabase *db, const char *key);
 int db_print(KeyValueDatabase *db);
 
-int db_test();
-
-int put(char *key, char *value);
-int get(char *key, char *res);
-int del(char *key);
-
+int db_test(KeyValueDatabase *db);
 
 #endif //PRAKTIKUM_KEYVALSTORE_H

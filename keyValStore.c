@@ -5,8 +5,6 @@
 #include "keyValStore.h"
 #include "stdio.h"
 
-KeyValueDatabase globalDb = {0, {0}};
-
 int db_init(KeyValueDatabase *db){
     db->inStore = 0;
     return 1;
@@ -100,32 +98,6 @@ int db_print(KeyValueDatabase *db){
     return 1;
 }
 
-int get(char *key, char *res){
-    return db_get(&globalDb,key,res);
-}
-
-int put(char *key, char *value){
-    return db_put(&globalDb,key,value);
-}
-
-int del(char *key){
-    return db_del(&globalDb, key);
-}
-
-
-
-void db_test_del(KeyValueDatabase *db){
-    db_del(db,"Blub");
-    db_del(db,"Eins");
-    db_del(db,"Noch irgendwas");
-
-    db_put(db,"Eins", "hallo");
-    db_put(db,"Noch irgendwas", "bla");
-
-    assert(db_del(db,"Eins") == 1);
-    assert(db_del(db,"Noch irgendwas") == 1);
-    assert(db_del(db,"Blub") < 0);
-}
 
 int db_test_simple_put_get_del(KeyValueDatabase *db, const char *key, const char *value){
     char result[MAX_VALUE_LENGTH];
@@ -138,10 +110,10 @@ int db_test_simple_put_get_del(KeyValueDatabase *db, const char *key, const char
     db_get(db,key, result);
     if(strcmp(value, result) == 0){
         fprintf(stdout,
-                "PASSED putAndGet: PUT %s %s\n",
+                "PASSED put_get_del: PUT %s %s\n",
                 key, value);
     } else {
-        fprintf(stderr,"FAILED putAndGet: PUT %s %s \n\tres: %s\n",
+        fprintf(stderr,"FAILED put_get_del: PUT %s %s \n\tres: %s\n",
                 key, value, result);
         putGetPassed = 0;
     }
@@ -177,25 +149,16 @@ int db_test_many_put_get_del(KeyValueDatabase *db, int numTests, int seed){
         randomKey[MAX_KEY_LENGTH-1] = '\0';
 
         int testPassed = db_test_simple_put_get_del(db, randomKey, randomValue);
-        if(testPassed){
-            fprintf(stdout,
-                    "PASSED putAndGet: PUT %s %s\n",
-                    randomKey, randomValue);
-        } else {
-            fprintf(stderr,"FAILED putAndGet: PUT %s %s \n",
-                    randomKey, randomValue);
+        if(!testPassed){
+            return 0;
         }
     }
     return 1;
 }
 
 
-int db_test(){
-    db_test_many_put_get_del(&globalDb,KEY_VALUE_MAX_LENGTH, time(NULL));
-    db_free(&globalDb);
-    db_test_del(&globalDb);
-    db_free(&globalDb);
-    return 1;
+int db_test(KeyValueDatabase *db){
+    return db_test_many_put_get_del(db,KEY_VALUE_MAX_LENGTH, time(NULL));
 }
 
 
