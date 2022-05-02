@@ -5,8 +5,11 @@
 #include "keyValStore.h"
 #include "stdio.h"
 
-int db_init(KeyValueDatabase *db){
+#include <semaphore.h>
+
+int db_init(KeyValueDatabase *db, int isSharedBetweenProcesses){
     db->inStore = 0;
+    sem_init(&db->semaphore,isSharedBetweenProcesses,1);
     return 1;
 }
 

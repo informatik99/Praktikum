@@ -62,7 +62,7 @@ int main() {
 
     // initialisiere die Datenbank und stelle sicher,
     // dass alles richtig funktioniert
-    db_init(sharedDatabaseHandle);
+    db_init(sharedDatabaseHandle,1);
     if(!db_test(sharedDatabaseHandle)){
         fprintf(stderr,"server store not working!\n");
         if(shmdt(sharedDatabaseHandle) < 0 ){
