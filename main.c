@@ -42,17 +42,38 @@ void userInteraction(KeyValueDatabase *db, int fileDescriptor){
 }
 
 #define SERVER_PORT 5678
+#include <sys/shm.h>
+#include <sys/wait.h>
+#include <stdlib.h>
 
 int main() {
+    KeyValueDatabase *sharedDatabaseHandle;
 
-    KeyValueDatabase db;
-    db_init(&db);
-    if(!db_test(&db)){
+    // Hole shared memory für unseren Store / Datenbank
+    int sharedMemReadWritePrivilege = 0644;   // vergebe lese- und schreibrechte
+    int sharedMemId = shmget(IPC_PRIVATE, sizeof(KeyValueDatabase),
+                              IPC_CREAT | sharedMemReadWritePrivilege);
+
+    sharedDatabaseHandle = (KeyValueDatabase*) shmat(sharedMemId,0,0);
+    if(sharedDatabaseHandle == NULL){
+        fprintf(stderr, "couldn't attach shared memory\n");
+        return 21;
+    }
+
+    // initialisiere die Datenbank und stelle sicher,
+    // dass alles richtig funktioniert
+    db_init(sharedDatabaseHandle);
+    if(!db_test(sharedDatabaseHandle)){
         fprintf(stderr,"server store not working!\n");
+        if(shmdt(sharedDatabaseHandle) < 0 ){
+            fprintf(stderr,"couldn't detach shared memory\n");
+        }
+        shmctl(sharedMemId, IPC_RMID, 0);
         return 1;
     };
 
     fprintf(stdout,"server store working\n");
+
 
     // der server braucht ein socket für die kommunikation
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -65,7 +86,8 @@ int main() {
     // nach dem Schließen unseres server programms,
     // wäre der socket noch für längere Zeit gebunden
     // das kann nerven, wenn man schnell den server wieder starten möchte
-    if(setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0){
+    if(setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR,
+                  &(int){1}, sizeof(int)) < 0){
         fprintf(stderr,"setsockopt(SO_REUSEADDR) failed");
         return 4;
     }
@@ -80,7 +102,8 @@ int main() {
     serverAddress.sin_port = htons(SERVER_PORT);
 
     // jetzt können wir unseren socket mit unseren daten binden
-    const int bindingStatus = bind(serverSocket, (struct sockaddr*) &serverAddress,
+    const int bindingStatus = bind(serverSocket,
+                                   (struct sockaddr*) &serverAddress,
                                    sizeof (serverAddress));
     // falls das nicht klappt...
     if(bindingStatus < 0){
@@ -98,37 +121,88 @@ int main() {
     struct sockaddr_in clientAddress;
     unsigned int clientAddressLen = sizeof(clientAddress);
 
+    // wir erlauben jetzt gerade einfach mal insgesamt 2 verbindungen
+    // (egal ob gleichzeitig oder nacheinander)
+    // bis das Programm schließt
+#define MAX_NUM_OF_CHILDS 2
+    int pids[MAX_NUM_OF_CHILDS];
+    int pidCount = 0;
+
     while(1){
         int clientFileDescriptor = accept(serverSocket,
                                           (struct sockaddr*) &clientAddress,
                                           &clientAddressLen);
-
         if(clientFileDescriptor < 0){
             fprintf(stderr, "invalid clientFileDescriptor\n");
             break;
         }
-
         int childPid = fork();
         if(childPid < 0){
             fprintf(stderr, "couldn't fork!\n");
             break;
         }
-
-        if(childPid == 0){
-            // child process
-            // jetzt kann der user mit dem clientFileDescriptor interagieren
-            userInteraction(&db,clientFileDescriptor);
-            close(clientFileDescriptor);
-            break;
+        else if(childPid == 0){
+            // kind prozess
+            // jetzt kann der user mit der Datenbank
+            // interagieren
+            childPid = getpid();
+            if(pidCount >= MAX_NUM_OF_CHILDS){
+                dprintf(clientFileDescriptor, "Sorry: too many connections\n");
+                fprintf(stderr,"child %d refused\n", childPid);
+                close(clientFileDescriptor);
+                exit(0);
+            } else {
+                fprintf(stdout,"child %d now working\n", childPid);
+                userInteraction(sharedDatabaseHandle,clientFileDescriptor);
+                if(shmdt(sharedDatabaseHandle) < 0 ){
+                    fprintf(stderr,"child %d couldn't detach from shared memory\n", childPid);
+                } else {
+                    fprintf(stdout, "child %d shared memory detached\n",childPid);
+                }
+                close(clientFileDescriptor);
+                fprintf(stdout,"child %d closed\n", childPid);
+                exit(0);
+            }
+        } else {
+            // eltern prozess
+            // der eltern prozess braucht gerade keine interaktion mehr mit dem client
+            // aber speichert vorsichtshalber die kind pid ab
+            fprintf(stdout,"child process created, pid: %d\n", childPid);
+            if(pidCount < MAX_NUM_OF_CHILDS) {
+                pids[pidCount] = childPid;
+                pidCount++;
+                close(clientFileDescriptor);
+                continue;
+            } else {
+                close(clientFileDescriptor);
+                break;
+            }
         }
-
-        // parent process
-        fprintf(stdout,"child process created, pid: %d\n", childPid);
-        close(clientFileDescriptor);
     }
 
+    // eltern prozess
+    // stelle sicher, dass alle clients fertig sind
+    printf("waiting for child processes to finish\n");
+    for(int i=0; i<pidCount; i++){
+        printf("wait for child %d\n", pids[i]);
+        waitpid(pids[i], NULL, 0);
+        printf("child %d closed\n", pids[i]);
+    }
+    printf("all %d childProcesses closed.\n", pidCount);
 
 
+    if(shmdt(sharedDatabaseHandle) < 0 ){
+        fprintf(stderr,"coudn't detach shared memory\n");
+    } else {
+        fprintf(stdout, "server parent shared memory detached\n");
+    }
 
+    if(shmctl(sharedMemId, IPC_RMID, 0) < 0){
+        fprintf(stderr,"coudn't destroy shared memory\n");
+    } else {
+        fprintf(stdout, "shared memory destroyed\n");
+    }
+
+    printf("exit server\n");
     return 0;
 }
