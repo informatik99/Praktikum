@@ -16,7 +16,12 @@ void userInteraction(KeyValueDatabase *db, int fileDescriptor){
     while(read(fileDescriptor,inputBuff,inputBuffSize) > 0){
         if(strncmp(inputBuff,"QUIT",4) == 0){
             break;
-        } else if(sscanf(inputBuff,"PUT %s %s",keyBuff,valBuff) == 2){
+        } else if(strncmp(inputBuff,"BEG",3) == 0){
+            dprintf(fileDescriptor,"NOT YET SUPPORTED\n");
+        } else if(strncmp(inputBuff,"END",3) == 0){
+            dprintf(fileDescriptor,"NOT YET SUPPORTED\n");
+        }
+        else if(sscanf(inputBuff,"PUT %s %s",keyBuff,valBuff) == 2){
             status = db_put(db,keyBuff,valBuff);
             if(status < 0){
                 dprintf(fileDescriptor,"PUT FAILED\n");
@@ -37,6 +42,8 @@ void userInteraction(KeyValueDatabase *db, int fileDescriptor){
             } else {
                 dprintf(fileDescriptor,"GET:%s:%s\n" ,keyBuff,valBuff);
             }
+        } else {
+            dprintf(fileDescriptor,"COMMAND UNKNOWN. what did you mean?\n");
         }
     }
 }
