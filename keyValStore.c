@@ -134,8 +134,8 @@ int db_test_simple_put_get_del(KeyValueDatabase *db, const char *key, const char
 }
 
 int db_test_many_put_get_del(KeyValueDatabase *db, int numTests, int seed){
-    char randomKey[MAX_VALUE_LENGTH];
-    char randomValue[MAX_KEY_LENGTH];
+    char randomKey[MAX_KEY_LENGTH];
+    char randomValue[MAX_VALUE_LENGTH];
     srand(seed);
     for(int t=0; t<numTests; t++){
         for(int i=0; i<MAX_VALUE_LENGTH-1; i++){

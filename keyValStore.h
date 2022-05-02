@@ -6,7 +6,7 @@
 #define PRAKTIKUM_KEYVALSTORE_H
 
 #define MAX_KEY_LENGTH 50
-#define MAX_VALUE_LENGTH 50
+#define MAX_VALUE_LENGTH 100
 
 typedef struct KeyValue_{
     char key[MAX_KEY_LENGTH];
