@@ -4,8 +4,7 @@
 #include "keyValStore.h"
 #include "string.h"
 
-
-void userInteraction(KeyValueDatabase *db, int fileDescriptor){
+void user_interact(int fileDescriptor, KeyValueDatabase *db){
     int inputBuffSize = MAX_KEY_LENGTH + MAX_VALUE_LENGTH;
     char inputBuff[inputBuffSize];
 
@@ -160,7 +159,7 @@ int main() {
                 exit(0);
             } else {
                 fprintf(stdout,"child %d now working\n", childPid);
-                userInteraction(sharedDatabaseHandle,clientFileDescriptor);
+                user_interact(clientFileDescriptor, sharedDatabaseHandle);
                 if(shmdt(sharedDatabaseHandle) < 0 ){
                     fprintf(stderr,"child %d couldn't detach from shared memory\n", childPid);
                 } else {
