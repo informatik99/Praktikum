@@ -5,7 +5,8 @@
 #ifndef PRAKTIKUM_KEY_VALUE_STORE_H
 #define PRAKTIKUM_KEY_VALUE_STORE_H
 
-#include <semaphore.h>
+//#include <semaphore.h>
+#include <sys/sem.h>
 
 #define MAX_KEY_LENGTH 50
 #define MAX_VALUE_LENGTH 100
@@ -19,17 +20,18 @@ typedef struct KeyValue {
 typedef struct KeyValueDatabase {
     KeyValue store[MAX_DB_ENTRIES];
     int inStore;
-    sem_t lockSemaphore;
+    int lockSemaphoreId;
 } KeyValueDatabase;
 
 typedef enum DbCommandStatus {
     DB_FAIL_NOT_ENOUGH_SPACE = -20,
     DB_FAIL_KEY_NON_EXISTENT,
     DB_FAIL_TEST,
+    DB_FAIL_NO_SEMAPHORE,
     DB_OK = 1,
 } DbCommandStatus;
 
-int db_init(KeyValueDatabase *db, int isSharedBetweenProcesses);
+int db_init(KeyValueDatabase *db);
 
 int db_free(KeyValueDatabase *db);
 

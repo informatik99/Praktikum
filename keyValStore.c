@@ -2,11 +2,12 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
-#include <semaphore.h>
+//#include <semaphore.h>
+#include <sys/sem.h>
 
 #include "keyValStore.h"
 
-int db_init(KeyValueDatabase *db, int isSharedBetweenProcesses) {
+int db_init(KeyValueDatabase *db) {
 
     // am Anfang haben wir keine
     // Wert-Schlüsselpaare gespeichert
@@ -15,8 +16,18 @@ int db_init(KeyValueDatabase *db, int isSharedBetweenProcesses) {
     // man muss einen exklusiven Zugriff
     // auf die Datenbank sicherstellen können,
     // dafür benötigen wir einen semaphore
-    sem_init(&db->lockSemaphore,
-             isSharedBetweenProcesses, 1);
+    int numOfSemaphores = 1;
+    int sharedMemReadWritePrivilege = 0644;
+    short initialSemaphoreValue = 1;
+    db->lockSemaphoreId = semget(IPC_PRIVATE,
+                                 numOfSemaphores,
+                                 IPC_CREAT | sharedMemReadWritePrivilege);
+    if(db->lockSemaphoreId < 0){
+        fprintf(stderr, "The database semaphore couldn't be created\n");
+        return DB_FAIL_NO_SEMAPHORE;
+    }
+    semctl(db->lockSemaphoreId,1,SETALL, &initialSemaphoreValue);
+
 
     return DB_OK;
 }
@@ -29,7 +40,7 @@ int db_free(KeyValueDatabase *db) {
 
     // der initialisierte semaphore,
     // sollte wieder zerstört werden
-    sem_destroy(&db->lockSemaphore);
+    semctl(db->lockSemaphoreId, 0, IPC_RMID);
 
     return DB_OK;
 }
@@ -134,7 +145,12 @@ int db_lock(KeyValueDatabase *db){
     // sobald der semaphore 0 ist, muss gewartet werden.
     // ein semaphore der mit 1 initialisiert wurde, sorgt
     // also für einen exklusiven Zugriff
-    sem_wait(&db->lockSemaphore);
+    struct sembuf semDownBuf;
+    semDownBuf.sem_op = -1;
+    semDownBuf.sem_num = 0;
+    semDownBuf.sem_flg = SEM_UNDO;
+    semop(db->lockSemaphoreId, &semDownBuf,1);
+
     return DB_OK;
 }
 
@@ -142,7 +158,13 @@ int db_unlock(KeyValueDatabase *db){
 
     // sem_post erhöht den semaphore um 1 und hebt
     // damit den exklusiven Zugriff wieder auf
-    sem_post(&db->lockSemaphore);
+    //sem_post(&db->lockSemaphore);
+    struct sembuf semUpBuf;
+    semUpBuf.sem_op = 1;
+    semUpBuf.sem_num = 0;
+    semUpBuf.sem_flg = SEM_UNDO;
+    semop(db->lockSemaphoreId,&semUpBuf,1);
+
     return DB_OK;
 }
 
