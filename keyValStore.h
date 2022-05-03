@@ -20,6 +20,7 @@ typedef struct KeyValueDatabase {
     KeyValue store[KEY_VALUE_MAX_LENGTH];
     int inStore;
     sem_t semPutGetDelPrint;
+    sem_t semTransaction;
 } KeyValueDatabase;
 
 
@@ -36,5 +37,9 @@ int db_del(KeyValueDatabase *db, const char *key);
 int db_print(KeyValueDatabase *db);
 
 int db_test(KeyValueDatabase *db);
+
+int db_beg(KeyValueDatabase *db);
+
+int db_end(KeyValueDatabase *db);
 
 #endif //PRAKTIKUM_KEYVALSTORE_H
