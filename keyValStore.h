@@ -2,8 +2,8 @@
 // Created by HP on 09.04.2022.
 //
 
-#ifndef PRAKTIKUM_KEYVALSTORE_H
-#define PRAKTIKUM_KEYVALSTORE_H
+#ifndef PRAKTIKUM_KEY_VALUE_STORE_H
+#define PRAKTIKUM_KEY_VALUE_STORE_H
 
 #include <semaphore.h>
 
@@ -15,12 +15,11 @@ typedef struct KeyValue {
     char value[MAX_VALUE_LENGTH];
 } KeyValue;
 
-#define KEY_VALUE_MAX_LENGTH 50
+#define MAX_DB_ENTRIES 50
 typedef struct KeyValueDatabase {
-    KeyValue store[KEY_VALUE_MAX_LENGTH];
+    KeyValue store[MAX_DB_ENTRIES];
     int inStore;
-    sem_t semPutGetDelPrint;
-    sem_t semTransaction;
+    sem_t lockSemaphore;
 } KeyValueDatabase;
 
 typedef enum DbCommandStatus {
@@ -44,8 +43,8 @@ int db_print(KeyValueDatabase *db);
 
 int db_test(KeyValueDatabase *db);
 
-int db_beg(KeyValueDatabase *db);
+int db_lock(KeyValueDatabase *db);
 
-int db_end(KeyValueDatabase *db);
+int db_unlock(KeyValueDatabase *db);
 
-#endif //PRAKTIKUM_KEYVALSTORE_H
+#endif //PRAKTIKUM_KEY_VALUE_STORE_H

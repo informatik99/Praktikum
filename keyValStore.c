@@ -1,29 +1,49 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-#include "keyValStore.h"
-#include "stdio.h"
+#include <stdio.h>
 #include <semaphore.h>
 
+#include "keyValStore.h"
+
 int db_init(KeyValueDatabase *db, int isSharedBetweenProcesses) {
+
+    // am Anfang haben wir keine
+    // Wert-Schlüsselpaare gespeichert
     db->inStore = 0;
-    sem_init(&db->semPutGetDelPrint, isSharedBetweenProcesses, 1);
-    sem_init(&db->semTransaction, isSharedBetweenProcesses, 1);
+
+    // man muss einen exklusiven Zugriff
+    // auf die Datenbank sicherstellen können,
+    // dafür benötigen wir einen semaphore
+    sem_init(&db->lockSemaphore,
+             isSharedBetweenProcesses, 1);
+
     return DB_OK;
 }
 
 int db_free(KeyValueDatabase *db) {
+
+    // wir speichern keine
+    // Wert-Schlüsselpaare mehr
     db->inStore = 0;
+
+    // der initialisierte semaphore,
+    // sollte wieder zerstört werden
+    sem_destroy(&db->lockSemaphore);
+
     return DB_OK;
 }
 
 int db_put(KeyValueDatabase *db, const char *key, const char *value) {
-    KeyValue new = {"", ""};
 
+    // dieser KeyValue soll die
+    // Eingabewerte zwischenspeichern
+    KeyValue new = {"", ""};
     strncpy(new.key, key, MAX_KEY_LENGTH);
     strncpy(new.value, value, MAX_VALUE_LENGTH);
 
-    /* Geht den Store durch, um zu schauen, ob dieser Key schon einen Wert hat */
+    // gehe den Store durch, um zu schauen,
+    // ob dieser Key schon einen Wert hat
     for (int i = 0; i < db->inStore; i++) {
         if (strncmp(db->store[i].key, key, MAX_KEY_LENGTH) == 0) {
             strncpy(db->store[i].value, value, MAX_VALUE_LENGTH);
@@ -31,39 +51,57 @@ int db_put(KeyValueDatabase *db, const char *key, const char *value) {
         }
     }
 
-    // der Key ist nicht im Store, jetzt müssen wir noch checken,
-    // ob wir genügend Platz haben, sonst bekommen wir vielleicht einen
+    // der Key ist nicht im Store.
+    // jetzt müssen wir noch checken,
+    // ob wir genügend Platz haben,
+    // sonst bekommen wir vielleicht einen
     // BufferOverflow (IndexOutOfBoundsException)
-    if (db->inStore >= KEY_VALUE_MAX_LENGTH) {
+    if (db->inStore >= MAX_DB_ENTRIES) {
         // kein Platz mehr
         return DB_FAIL_NOT_ENOUGH_SPACE;
     }
 
-    // falls nicht, wird das neue KeyValue-Objekt hier in den Store getan
+    // falls nicht, wird das neue KeyValue-Objekt
+    // hier in den Store getan
     db->store[db->inStore++] = new;
     return DB_OK;
 }
 
 int db_get(KeyValueDatabase *db, const char *key, char *result) {
+
+    // gehe durch die daten durch und schaue
+    // ob der Key übereinstimmt
     for (int i = 0; i < db->inStore; i++) {
+
         if (strncmp(db->store[i].key, key, MAX_KEY_LENGTH) == 0) {
+
+            // der gesuchte key wurde gefunden...
+            // jetzt können wir den entsprechenden value zurückschreiben
             strncpy(result, db->store[i].value, MAX_VALUE_LENGTH);
             return DB_OK;
         }
+
     }
+
+    // der key wurde nicht gefunden,
+    // deswegen geben wir am besten
+    // einen leeren string zurück
     memset(result, 0, MAX_VALUE_LENGTH);
+
     return DB_FAIL_KEY_NON_EXISTENT;
 }
 
 int db_del(KeyValueDatabase *db, const char *key) {
+
     // falls es keinen eintrag gibt,
     // gib einen fehler zurück
     if (db->inStore == 0) {
         return DB_FAIL_KEY_NON_EXISTENT;
     }
 
-    // finde die richtige position im store
-    int keyIndex = 0;
+    // finde die richtige
+    // position im store
+    int keyIndex;
     for (keyIndex = 0; keyIndex < db->inStore; keyIndex++) {
         if (strcmp(db->store[keyIndex].key, key) == 0) {
             break;
@@ -71,7 +109,7 @@ int db_del(KeyValueDatabase *db, const char *key) {
     }
 
     // falls es den key nicht gibt,
-    // gib einen fehler aus
+    // gib einen fehler zurück
     if (keyIndex >= db->inStore) {
         return DB_FAIL_KEY_NON_EXISTENT;
     }
@@ -90,86 +128,155 @@ int db_del(KeyValueDatabase *db, const char *key) {
     return DB_OK;
 }
 
-int db_beg(KeyValueDatabase *db){
-    sem_wait(&db->semPutGetDelPrint);
+int db_lock(KeyValueDatabase *db){
+
+    // sem_wait erniedrigt den jeweiligen semaphore um eins.
+    // sobald der semaphore 0 ist, muss gewartet werden.
+    // ein semaphore der mit 1 initialisiert wurde, sorgt
+    // also für einen exklusiven Zugriff
+    sem_wait(&db->lockSemaphore);
     return DB_OK;
 }
 
-int db_end(KeyValueDatabase *db){
-    sem_post(&db->semPutGetDelPrint);
+int db_unlock(KeyValueDatabase *db){
+
+    // sem_post erhöht den semaphore um 1 und hebt
+    // damit den exklusiven Zugriff wieder auf
+    sem_post(&db->lockSemaphore);
     return DB_OK;
 }
 
 int db_print(KeyValueDatabase *db) {
-    printf("Im Store sind:\n");
+
+    // gehe durch die daten
+    // und gebe sie einfach aus
+    printf("Store:\n");
     for (int i = 0; i < db->inStore; i++) {
-        printf("(Key: \"%s\" Wert: \"%s\")", db->store[i].key, db->store[i].value);
+        printf("(Key: \"%s\" Value: \"%s\")",
+               db->store[i].key, db->store[i].value);
     }
     return DB_OK;
 }
 
-int db_test_simple_put_get_del(KeyValueDatabase *db, const char *key, const char *value) {
+int db_test_put_get_del_get(KeyValueDatabase *db, const char *key, const char *value) {
+
     char result[MAX_VALUE_LENGTH];
-    char delResultStr[MAX_VALUE_LENGTH];
+    int statusCode;
 
-    int putGetPassed = 1;
-    int delPassed = 1;
+    // teste, ob einfügen funktioniert
+    statusCode = db_put(db, key, value);
 
-    db_put(db, key, value);
-    db_get(db, key, result);
-    if (strcmp(value, result) == 0) {
-        fprintf(stdout,
-                "PASSED put_get_del: PUT %s %s\n",
-                key, value);
-    } else {
-        fprintf(stderr, "FAILED put_get_del: PUT %s %s \n\tres: %s\n",
+    if(statusCode != DB_OK){
+        fprintf(stderr,
+                "FAILED PUT: PUT %s %s  status code %d\n",
+                key, value, statusCode);
+        return DB_FAIL_TEST;
+    }
+
+    // einfügen funktioniert
+    fprintf(stdout,
+            "PASSED PUT: PUT %s %s\n",
+            key, value);
+
+    // teste, ob wir das zurückbekommen,
+    // was wir reingetan haben
+    statusCode = db_get(db, key, result);
+
+    if(statusCode != DB_OK){
+        fprintf(stderr,
+                "FAILED GET after PUT: PUT_GET %s %s\tstatusCode: %d",
+                    key, value, statusCode);
+        return DB_FAIL_TEST;
+    }
+
+    if(strcmp(value, result) != 0) {
+        fprintf(stderr,
+                "FAILED GET after PUT: PUT_GET %s %s \n\tGET res: %s\n",
                 key, value, result);
-        putGetPassed = 0;
+        return DB_FAIL_TEST;
     }
 
-    int delStatus = db_del(db, key);
-    if (delStatus < 0) {
-        fprintf(stderr, "FAILED del: statusCode %d for DEL %s\n", delStatus, key);
-        delPassed = 0;
+    // zurückbekommen hat funktioniert
+    fprintf(stdout,
+            "PASSED GET after PUT: GET %s: %s = %s \n",
+            key, value, result);
+
+    // teste, ob löschen funktioniert
+    statusCode = db_del(db, key);
+
+    if(statusCode != DB_OK) {
+        fprintf(stderr,
+                "FAILED DEL after PUT and GET: statusCode %d for DEL %s\n",
+                statusCode, key);
+        return DB_FAIL_TEST;
     }
 
-    db_get(db, key, delResultStr);
-    if (strncmp(delResultStr, value, MAX_VALUE_LENGTH) == 0) {
-        fprintf(stderr, "FAILED del: DEL %s  res: %s", delResultStr, value);
-        delPassed = 0;
+    // wenn wir zurückbekommen wollen,
+    // was wir bereits gelöscht haben,
+    // soll das fehlschlagen.
+    // der statuscode sollte einen fehler anzeigen und
+    // der wiedergegebene string sollte leer sein.
+    statusCode = db_get(db, key, result);
+
+
+    if(statusCode == DB_OK){
+        fprintf(stderr,
+                "FAILED DEL after PUT and GET: statusCode %d\n",
+                statusCode);
+        return DB_FAIL_TEST;
     }
-    db_del(db, key);
-    if(putGetPassed && delPassed) {
-        return DB_OK;
+
+    if (strncmp(result, value, MAX_VALUE_LENGTH) == 0) {
+        fprintf(stderr,
+                "FAILED DEL after PUT and GET: GET after DEL %s res: %s",
+                value, result);
     }
-    return DB_FAIL_TEST;
+
+    // löschen funktioniert richtig
+    fprintf(stdout,"PASSED DELETE: DEL %s \n",key);
+
+    return DB_OK;
 }
 
-int db_test_many_put_get_del(KeyValueDatabase *db, int numTests, int seed) {
+
+void string_randomize(char *input, int size, int seed){
+    srand(seed);
+    for (int i = 0; i < MAX_VALUE_LENGTH - 1; i++) {
+        input[i] = (char) (rand() % (126 - 32) + 32);
+    }
+    input[size-1] = '\0';
+}
+
+
+int db_test_many_put_get_del(KeyValueDatabase *db, int numTests) {
+
+    // teste mit zufälligen strings
     char randomKey[MAX_KEY_LENGTH];
     char randomValue[MAX_VALUE_LENGTH];
-    srand(seed);
+
     for (int t = 0; t < numTests; t++) {
-        for (int i = 0; i < MAX_VALUE_LENGTH - 1; i++) {
-            randomValue[i] = (char) (rand() % (126 - 32) + 32);
-        }
-        randomValue[MAX_VALUE_LENGTH - 1] = '\0';
 
-        for (int i = 0; i < MAX_KEY_LENGTH - 1; i++) {
-            randomKey[i] = (char) (rand() % (126 - 32) + 32);
-        }
-        randomKey[MAX_KEY_LENGTH - 1] = '\0';
+        // erstelle zufällige strings
+        string_randomize(randomKey,MAX_KEY_LENGTH,(int) time(NULL));
+        string_randomize(randomValue, MAX_VALUE_LENGTH,(int) (time(NULL)));
 
-        int testStatus = db_test_simple_put_get_del(db, randomKey, randomValue);
+        // teste damit
+        int testStatus = db_test_put_get_del_get(db, randomKey, randomValue);
         if (testStatus != DB_OK) {
             return DB_FAIL_TEST;
         }
+
     }
+
+    // wenn alle tests funktioniert haben,
+    // dann hat auch der hier funktioniert.
     return DB_OK;
 }
 
+
 int db_test(KeyValueDatabase *db) {
-    return db_test_many_put_get_del(db, KEY_VALUE_MAX_LENGTH, time(NULL));
+    int numTests = 500;
+    return db_test_many_put_get_del(db, numTests);
 }
 
 

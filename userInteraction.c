@@ -31,11 +31,11 @@ const char *welcomeInfo =
 
 
 const char *unavailableInfo =
-    " ____|    \\         ___ ___ ___   \n"
-    "(____|     `._____  | | |   | | |  \n"
-    " ____|       _|___  |_  | | |_  |  \n"
-    "(____|     .'         |_|___| |_|  \n"
-    "     |____/                        \n";
+        " ____|    \\         ___ ___ ___   \n"
+        "(____|     `._____  | | |   | | |  \n"
+        " ____|       _|___  |_  | | |_  |  \n"
+        "(____|     .'         |_|___| |_|  \n"
+        "     |____/                        \n";
 
 
 const char *transactionInfo =
@@ -56,15 +56,17 @@ const char *userInputPrefix = "$ ";
 const char *serverOutputPrefix = "> ";
 
 
-int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db){
+int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db) {
+
     int inputBuffSize = MAX_KEY_LENGTH + MAX_VALUE_LENGTH;
     char inputBuff[inputBuffSize];
 
     char keyBuff[MAX_KEY_LENGTH] = "";
     char valBuff[MAX_VALUE_LENGTH] = "";
-    int status = 0;
+    int status;
 
-    dprintf(fileDescriptor,"%s\n", transactionInfo);
+    dprintf(fileDescriptor, "%s\n", transactionInfo);
+
     while (read(fileDescriptor, inputBuff, inputBuffSize) > 0) {
 
         if (strncmp(inputBuff, "QUIT", 4) == 0) {
@@ -95,7 +97,7 @@ int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db){
             if (status < 0) {
                 dprintf(fileDescriptor,
                         "%sPUT FAILED\n%s",
-                        serverOutputPrefix,userInputPrefix);
+                        serverOutputPrefix, userInputPrefix);
             } else {
                 dprintf(fileDescriptor,
                         "%sPUT %s:%s\n%s",
@@ -143,15 +145,17 @@ int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db){
     return 0;
 }
 
+
 int user_interact(int fileDescriptor, KeyValueDatabase *db) {
+
     int inputBuffSize = MAX_KEY_LENGTH + MAX_VALUE_LENGTH;
     char inputBuff[inputBuffSize];
 
     char keyBuff[MAX_KEY_LENGTH] = "";
     char valBuff[MAX_VALUE_LENGTH] = "";
-    int status = 0;
+    int status;
 
-    dprintf(fileDescriptor,"%s\n$ ", welcomeInfo);
+    dprintf(fileDescriptor, "%s\n$ ", welcomeInfo);
 
     while (read(fileDescriptor, inputBuff, inputBuffSize) > 0) {
 
@@ -159,17 +163,18 @@ int user_interact(int fileDescriptor, KeyValueDatabase *db) {
 
             dprintf(fileDescriptor,
                     "%sThank you for using our service!\n%s",
-                    serverOutputPrefix,userInputPrefix);
+                    serverOutputPrefix, userInputPrefix);
             break;
 
         } else if (strncmp(inputBuff, "BEG", 3) == 0) {
 
-            db_beg(db);
+            // execute command
+            db_lock(db);
             dprintf(fileDescriptor,
                     "%sTRANSACTION START\n%s",
                     serverOutputPrefix, userInputPrefix);
-            user_interact_inside_transaction(fileDescriptor,db);
-            db_end(db);
+            user_interact_inside_transaction(fileDescriptor, db);
+            db_unlock(db);
 
         } else if (strncmp(inputBuff, "END", 3) == 0) {
 
@@ -180,9 +185,9 @@ int user_interact(int fileDescriptor, KeyValueDatabase *db) {
         } else if (sscanf(inputBuff, "PUT %s %s", keyBuff, valBuff) == 2) {
 
             // execute command
-            db_beg(db);
+            db_lock(db);
             status = db_put(db, keyBuff, valBuff);
-            db_end(db);
+            db_unlock(db);
 
             // print result
             if (status < 0) {
@@ -198,15 +203,15 @@ int user_interact(int fileDescriptor, KeyValueDatabase *db) {
         } else if (sscanf(inputBuff, "DEL %s", keyBuff) == 1) {
 
             // execute command
-            db_beg(db);
+            db_lock(db);
             status = db_del(db, keyBuff);
-            db_end(db);
+            db_unlock(db);
 
             // print result
             if (status < 0) {
                 dprintf(fileDescriptor,
                         "%sDEL failed\n%s",
-                        serverOutputPrefix, userInputPrefix );
+                        serverOutputPrefix, userInputPrefix);
             } else {
                 dprintf(fileDescriptor,
                         "%sDEL %s\n%s",
@@ -216,9 +221,9 @@ int user_interact(int fileDescriptor, KeyValueDatabase *db) {
         } else if (sscanf(inputBuff, "GET %s", keyBuff)) {
 
             // execute command
-            db_beg(db);
+            db_lock(db);
             status = db_get(db, keyBuff, valBuff);
-            db_end(db);
+            db_unlock(db);
 
             // print result
             if (status < 0) {
@@ -240,7 +245,7 @@ int user_interact(int fileDescriptor, KeyValueDatabase *db) {
     return 0;
 }
 
-int user_show_unavailable(int fileDescriptor){
-    dprintf(fileDescriptor,"%s\n",unavailableInfo);
+int user_show_unavailable(int fileDescriptor) {
+    dprintf(fileDescriptor, "%s\n", unavailableInfo);
     return 0;
 }

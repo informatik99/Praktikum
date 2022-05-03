@@ -24,22 +24,7 @@ DEL key
 
 ## Coding Style
 
-```c
+- Macros, Konstanten groß: `MAX_BUFFER_SIZE`
+- Structs und typedefs CamelCase: `DoorFactory`
+- funktionen die sich auf structs beziehen: `struct_action(...);`
 
-#define PREPROCESSOR_MACROS_CONSTANTS_UPPERCASE
-
-typedef enum {
-    ENUMS_EVERYTHING_UPPERCASE
-} EnumTypesUpperCamelCase;
-
-typedef struct StructUpperCamelCase {
-    int memberVariableLowerCamelCase;
-    char anotherLowerCamelCaseVariable;
-} StructUpperCamelCase;
-
-
-int prefix_obj_action(AnyType *obj);
-int obj_action(SomeOtherType *obj)
-
-
-```
