@@ -23,6 +23,12 @@ typedef struct KeyValueDatabase {
     sem_t semTransaction;
 } KeyValueDatabase;
 
+typedef enum DbCommandStatus {
+    DB_FAIL_NOT_ENOUGH_SPACE = -20,
+    DB_FAIL_KEY_NON_EXISTENT,
+    DB_FAIL_TEST,
+    DB_OK = 1,
+} DbCommandStatus;
 
 int db_init(KeyValueDatabase *db, int isSharedBetweenProcesses);
 

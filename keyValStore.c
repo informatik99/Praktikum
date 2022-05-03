@@ -9,12 +9,12 @@ int db_init(KeyValueDatabase *db, int isSharedBetweenProcesses) {
     db->inStore = 0;
     sem_init(&db->semPutGetDelPrint, isSharedBetweenProcesses, 1);
     sem_init(&db->semTransaction, isSharedBetweenProcesses, 1);
-    return 1;
+    return DB_OK;
 }
 
 int db_free(KeyValueDatabase *db) {
     db->inStore = 0;
-    return 1;
+    return DB_OK;
 }
 
 int db_put(KeyValueDatabase *db, const char *key, const char *value) {
@@ -27,7 +27,7 @@ int db_put(KeyValueDatabase *db, const char *key, const char *value) {
     for (int i = 0; i < db->inStore; i++) {
         if (strncmp(db->store[i].key, key, MAX_KEY_LENGTH) == 0) {
             strncpy(db->store[i].value, value, MAX_VALUE_LENGTH);
-            return 1;
+            return DB_OK;
         }
     }
 
@@ -36,30 +36,30 @@ int db_put(KeyValueDatabase *db, const char *key, const char *value) {
     // BufferOverflow (IndexOutOfBoundsException)
     if (db->inStore >= KEY_VALUE_MAX_LENGTH) {
         // kein Platz mehr
-        return -1;
+        return DB_FAIL_NOT_ENOUGH_SPACE;
     }
 
     // falls nicht, wird das neue KeyValue-Objekt hier in den Store getan
     db->store[db->inStore++] = new;
-    return 0;
+    return DB_OK;
 }
 
 int db_get(KeyValueDatabase *db, const char *key, char *result) {
     for (int i = 0; i < db->inStore; i++) {
         if (strncmp(db->store[i].key, key, MAX_KEY_LENGTH) == 0) {
             strncpy(result, db->store[i].value, MAX_VALUE_LENGTH);
-            return 0;
+            return DB_OK;
         }
     }
     memset(result, 0, MAX_VALUE_LENGTH);
-    return -1;
+    return DB_FAIL_KEY_NON_EXISTENT;
 }
 
 int db_del(KeyValueDatabase *db, const char *key) {
     // falls es keinen eintrag gibt,
     // gib einen fehler zurück
     if (db->inStore == 0) {
-        return -1;
+        return DB_FAIL_KEY_NON_EXISTENT;
     }
 
     // finde die richtige position im store
@@ -73,7 +73,7 @@ int db_del(KeyValueDatabase *db, const char *key) {
     // falls es den key nicht gibt,
     // gib einen fehler aus
     if (keyIndex >= db->inStore) {
-        return -2;
+        return DB_FAIL_KEY_NON_EXISTENT;
     }
 
     // tausche den letzten eintrag mit dem
@@ -87,16 +87,25 @@ int db_del(KeyValueDatabase *db, const char *key) {
     db->inStore--;
 
     // alles in ordnung
-    return 1;
+    return DB_OK;
 }
 
+int db_beg(KeyValueDatabase *db){
+    sem_wait(&db->semPutGetDelPrint);
+    return DB_OK;
+}
+
+int db_end(KeyValueDatabase *db){
+    sem_post(&db->semPutGetDelPrint);
+    return DB_OK;
+}
 
 int db_print(KeyValueDatabase *db) {
     printf("Im Store sind:\n");
     for (int i = 0; i < db->inStore; i++) {
         printf("(Key: \"%s\" Wert: \"%s\")", db->store[i].key, db->store[i].value);
     }
-    return 1;
+    return DB_OK;
 }
 
 int db_test_simple_put_get_del(KeyValueDatabase *db, const char *key, const char *value) {
@@ -130,7 +139,10 @@ int db_test_simple_put_get_del(KeyValueDatabase *db, const char *key, const char
         delPassed = 0;
     }
     db_del(db, key);
-    return putGetPassed && delPassed;
+    if(putGetPassed && delPassed) {
+        return DB_OK;
+    }
+    return DB_FAIL_TEST;
 }
 
 int db_test_many_put_get_del(KeyValueDatabase *db, int numTests, int seed) {
@@ -148,12 +160,12 @@ int db_test_many_put_get_del(KeyValueDatabase *db, int numTests, int seed) {
         }
         randomKey[MAX_KEY_LENGTH - 1] = '\0';
 
-        int testPassed = db_test_simple_put_get_del(db, randomKey, randomValue);
-        if (!testPassed) {
-            return 0;
+        int testStatus = db_test_simple_put_get_del(db, randomKey, randomValue);
+        if (testStatus != DB_OK) {
+            return DB_FAIL_TEST;
         }
     }
-    return 1;
+    return DB_OK;
 }
 
 int db_test(KeyValueDatabase *db) {
@@ -161,15 +173,7 @@ int db_test(KeyValueDatabase *db) {
 }
 
 
-int db_beg(KeyValueDatabase *db){
-    sem_wait(&db->semPutGetDelPrint);
-    return 1;
-}
 
-int db_end(KeyValueDatabase *db){
-    sem_post(&db->semPutGetDelPrint);
-    return 1;
-}
 
 
 
