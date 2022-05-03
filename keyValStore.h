@@ -20,7 +20,6 @@ typedef struct KeyValueDatabase {
     KeyValue store[KEY_VALUE_MAX_LENGTH];
     int inStore;
     sem_t semPutGetDelPrint;
-    sem_t semTransaction;
 } KeyValueDatabase;
 
 typedef enum DbCommandStatus {
