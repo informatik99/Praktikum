@@ -141,7 +141,7 @@ int db_del(KeyValueDatabase *db, const char *key) {
 
 int db_lock(KeyValueDatabase *db){
 
-    // sem_wait erniedrigt den jeweiligen semaphore um eins.
+    // erniedrige den jeweiligen semaphore um eins.
     // sobald der semaphore 0 ist, muss gewartet werden.
     // ein semaphore der mit 1 initialisiert wurde, sorgt
     // also für einen exklusiven Zugriff
@@ -156,9 +156,8 @@ int db_lock(KeyValueDatabase *db){
 
 int db_unlock(KeyValueDatabase *db){
 
-    // sem_post erhöht den semaphore um 1 und hebt
+    // erhöhe den semaphore um 1 und hebe
     // damit den exklusiven Zugriff wieder auf
-    //sem_post(&db->lockSemaphore);
     struct sembuf semUpBuf;
     semUpBuf.sem_op = 1;
     semUpBuf.sem_num = 0;
