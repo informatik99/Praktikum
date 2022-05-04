@@ -37,7 +37,7 @@ int main() {
 
     // initialisiere die Datenbank und stelle sicher,
     // dass alles richtig funktioniert
-    db_init(sharedDatabaseHandle, 1);
+    db_init(sharedDatabaseHandle);
 
     if (db_test(sharedDatabaseHandle) == DB_FAIL_TEST) {
 
