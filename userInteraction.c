@@ -5,15 +5,50 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/msg.h>
+#include <assert.h>
 #include "keyValStore.h"
 
-const char *welcomeInfo = "Herzlich willkommen!\n";
-const char *unavailableInfo = "Bitte später wiederkommen.";
-const char *transactionInfo = "TRANSACTION BEGIN\n";
-const char *transactionCloseInfo = "TRANSACTION END\n";
+const char *welcomeInfo = "Herzlich willkommen!\r\n";
+const char *unavailableInfo = "Bitte spaeter wiederkommen.\r\n";
+const char *transactionInfo = "";
+const char *transactionCloseInfo = "";
 
 const char *userInputPrefix = "$ ";
 const char *serverOutputPrefix = "> ";
+
+unsigned int readline(int fileDescriptor, char *outputBuff, unsigned int maxLength){
+    assert(maxLength >= 3);
+    char readBuffer[maxLength];
+    unsigned int readCountTotal = 0;
+    unsigned int readCount = 0;
+    while((readCount = read(fileDescriptor, readBuffer, maxLength)) > 0){
+        if(readCountTotal + readCount < maxLength - 3){
+            for(int i=0; i<readCount; i++){
+                outputBuff[readCountTotal + i] = readBuffer[i];
+                if(outputBuff[readCountTotal + i] == '\n'){
+                    readCountTotal += i;
+                    outputBuff[readCountTotal] = '\r';
+                    outputBuff[readCountTotal + 1] = '\n';
+                    outputBuff[readCountTotal + 2] = '\0';
+                    return readCountTotal + 3;
+                }
+            }
+            readCountTotal += readCount;
+        } else {
+            unsigned int numToWrite = maxLength - readCountTotal;
+            for(int i=0; i<numToWrite; i++){
+                outputBuff[readCountTotal + i] = readBuffer[i];
+            }
+            outputBuff[maxLength - 3] = '\r';
+            outputBuff[maxLength - 2] = '\n';
+            outputBuff[maxLength - 1] = '\0';
+            readCountTotal += numToWrite;
+            return readCountTotal;
+        }
+    }
+    return 0;
+}
+
 
 int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db) {
 
@@ -31,19 +66,21 @@ int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db) {
     snprintf(outputBuff,outputBuffSize,"%s", transactionInfo);
     write(fileDescriptor, outputBuff, outputBuffSize);
 
-    while (read(fileDescriptor, inputBuff, inputBuffSize) > 0) {
+    while (readline(fileDescriptor, inputBuff, inputBuffSize) > 0) {
+
+        memset(outputBuff, 0, outputBuffSize);
 
         if (strncmp(inputBuff, "QUIT", 4) == 0) {
 
             snprintf(outputBuff, outputBuffSize,
-                     "%sYou are inside a transaction. Please say END first\n%s",
+                     "%sYou are inside a transaction. Please say END first\r\n%s",
                      serverOutputPrefix, userInputPrefix);
             write(fileDescriptor,outputBuff,outputBuffSize);
 
         } else if (strncmp(inputBuff, "BEG", 3) == 0) {
 
             snprintf(outputBuff, outputBuffSize,
-                     "%sYou are already inside the transaction\n%s",
+                     "%sYou are already inside the transaction\r\n%s",
                      serverOutputPrefix, userInputPrefix);
 
             write(fileDescriptor,outputBuff,outputBuffSize);
@@ -65,13 +102,13 @@ int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db) {
             // print result
             if (status < 0) {
                 snprintf(outputBuff, outputBuffSize,
-                         "%sPUT FAILED\n%s",
+                         "%sPUT FAILED\r\n%s",
                          serverOutputPrefix, userInputPrefix);
                 write(fileDescriptor, outputBuff,outputBuffSize);
             } else {
 
                 snprintf(outputBuff,outputBuffSize,
-                        "%sPUT %s:%s\n%s",
+                        "%sPUT %s:%s\r\n%s",
                         serverOutputPrefix, keyBuff, valBuff, userInputPrefix);
                 write(fileDescriptor, outputBuff,outputBuffSize);
             }
@@ -84,12 +121,12 @@ int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db) {
             // print result
             if (status < 0) {
                 snprintf(outputBuff,outputBuffSize,
-                        "%sDEL failed\n%s",
+                        "%sDEL failed\r\n%s",
                         serverOutputPrefix, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             } else {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sDEL %s\n%s",
+                        "%sDEL %s\r\n%s",
                         serverOutputPrefix, keyBuff, userInputPrefix);
             }
 
@@ -100,19 +137,19 @@ int user_interact_inside_transaction(int fileDescriptor, KeyValueDatabase *db) {
             // print result
             if (status < 0) {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sGET failed\n%s",
+                        "%sGET failed\r\n%s",
                         serverOutputPrefix, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             } else {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sGET:%s:%s\n%s",
+                        "%sGET:%s:%s\r\n%s",
                         serverOutputPrefix, keyBuff, valBuff, userInputPrefix);
                 write(fileDescriptor,outputBuff, outputBuffSize);
             }
 
         } else {
             snprintf(outputBuff, outputBuffSize,
-                    "%sCOMMAND UNKNOWN. what did you mean by %s?\n%s",
+                    "%sCOMMAND UNKNOWN. what did you mean by %s?\r\n%s",
                     serverOutputPrefix, inputBuff ,userInputPrefix);
             write(fileDescriptor, outputBuff, outputBuffSize);
         }
@@ -134,18 +171,18 @@ int user_interact_with_db_locking(int fileDescriptor, KeyValueDatabase *db) {
     char outputBuff[outputBuffSize];
     memset(outputBuff, 0, outputBuffSize);
 
-    snprintf(outputBuff, outputBuffSize, "%s\n$ ", welcomeInfo);
+    snprintf(outputBuff, outputBuffSize, "%s\r\n$ ", welcomeInfo);
     write(fileDescriptor, outputBuff, outputBuffSize);
 
 
-    while (read(fileDescriptor, inputBuff, inputBuffSize) > 0) {
+    while (readline(fileDescriptor, inputBuff, inputBuffSize) > 0) {
 
         memset(outputBuff, 0, outputBuffSize);
 
         if (strncmp(inputBuff, "QUIT", 4) == 0) {
 
             snprintf(outputBuff, outputBuffSize,
-                    "%sThank you for using our service!\n%s",
+                    "%sThank you for using our service!\r\n%s",
                     serverOutputPrefix, userInputPrefix);
             write(fileDescriptor, outputBuff, outputBuffSize);
 
@@ -156,7 +193,7 @@ int user_interact_with_db_locking(int fileDescriptor, KeyValueDatabase *db) {
             // execute command
             db_lock(db);
             snprintf(outputBuff, outputBuffSize,
-                    "%sTRANSACTION START\n%s",
+                    "%sTRANSACTION START\r\n%s",
                     serverOutputPrefix, userInputPrefix);
             write(fileDescriptor, outputBuff, outputBuffSize);
             user_interact_inside_transaction(fileDescriptor, db);
@@ -165,7 +202,7 @@ int user_interact_with_db_locking(int fileDescriptor, KeyValueDatabase *db) {
         } else if (strncmp(inputBuff, "END", 3) == 0) {
 
             snprintf(outputBuff, outputBuffSize,
-                    "%sYou are NOT inside a transaction\n%s",
+                    "%sYou are NOT inside a transaction\r\n%s",
                     serverOutputPrefix, userInputPrefix);
             write(fileDescriptor, outputBuff, outputBuffSize);
 
@@ -179,12 +216,12 @@ int user_interact_with_db_locking(int fileDescriptor, KeyValueDatabase *db) {
             // print result
             if (status < 0) {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sPUT FAILED\n%s",
+                        "%sPUT FAILED\r\n%s",
                         serverOutputPrefix, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             } else {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sPUT %s:%s\n%s",
+                        "%sPUT %s:%s\r\n%s",
                         serverOutputPrefix, keyBuff, valBuff, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             }
@@ -199,12 +236,12 @@ int user_interact_with_db_locking(int fileDescriptor, KeyValueDatabase *db) {
             // print result
             if (status < 0) {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sDEL failed\n%s",
+                        "%sDEL failed\r\n%s",
                         serverOutputPrefix, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             } else {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sDEL %s\n%s",
+                        "%sDEL %s\r\n%s",
                         serverOutputPrefix, keyBuff, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             }
@@ -219,19 +256,19 @@ int user_interact_with_db_locking(int fileDescriptor, KeyValueDatabase *db) {
             // print result
             if (status < 0) {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sGET failed\n%s",
+                        "%sGET failed\r\n%s",
                         serverOutputPrefix, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             } else {
                 snprintf(outputBuff, outputBuffSize,
-                        "%sGET:%s:%s\n%s",
+                        "%sGET:%s:%s\r\n%s",
                         serverOutputPrefix, keyBuff, valBuff, userInputPrefix);
                 write(fileDescriptor, outputBuff, outputBuffSize);
             }
 
         } else {
             snprintf(outputBuff, outputBuffSize,
-                    "%sCOMMAND UNKNOWN. what did you mean?\n%s",
+                    "%sCOMMAND UNKNOWN. what did you mean?\r\n%s",
                     serverOutputPrefix, userInputPrefix);
             write(fileDescriptor, outputBuff, outputBuffSize);
         }
