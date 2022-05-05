@@ -5,6 +5,7 @@
 #include <sys/shm.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "keyValStore.h"
 #include "userInteraction.h"
@@ -39,6 +40,7 @@ int main() {
     // dass alles richtig funktioniert
     db_init(sharedDatabaseHandle);
 
+    srand(time(NULL));
     if (db_test(sharedDatabaseHandle) == DB_FAIL_TEST) {
 
         // falls die Datenbank nicht funktioniert,

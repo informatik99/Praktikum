@@ -260,8 +260,7 @@ int db_test_put_get_del_get(KeyValueDatabase *db, const char *key, const char *v
 }
 
 
-void string_randomize(char *input, int size, int seed){
-    srand(seed);
+void string_randomize(char *input, int size){
     for (int i = 0; i < MAX_VALUE_LENGTH - 1; i++) {
         input[i] = (char) (rand() % (126 - 32) + 32);
     }
@@ -278,8 +277,8 @@ int db_test_many_put_get_del(KeyValueDatabase *db, int numTests) {
     for (int t = 0; t < numTests; t++) {
 
         // erstelle zufällige strings
-        string_randomize(randomKey,MAX_KEY_LENGTH,(int) time(NULL));
-        string_randomize(randomValue, MAX_VALUE_LENGTH,(int) (time(NULL)));
+        string_randomize(randomKey,MAX_KEY_LENGTH);
+        string_randomize(randomValue, MAX_VALUE_LENGTH);
 
         // teste damit
         int testStatus = db_test_put_get_del_get(db, randomKey, randomValue);
