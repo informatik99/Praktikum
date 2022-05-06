@@ -20,6 +20,11 @@ telnet localhost 5678
 PUT key value
 GET key
 DEL key
+SUB key
+UNSUB key
+BEG
+END
+QUIT
 ```
 
 ## Coding Style
